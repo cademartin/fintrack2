@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tea Tracker — Finances</title>
+    <meta name="description" content="Manage your financial transactions and track income vs expenses.">
+
+    <script src="capacitor.js"></script>
+
+    <!-- Tailwind CSS: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/tailwind.js';
+            s.onerror = function () {
+                var cdn = document.createElement('script');
+                cdn.src = 'https://cdn.tailwindcss.com';
+                document.head.appendChild(cdn);
+            };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Outfit Font: Local-First -->
+    <style>
+        @font-face { font-family: 'Outfit'; font-weight: 300; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-300.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-400.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-600.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 800; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-800.woff2') format('woff2'); }
+        body { font-family: 'Outfit', sans-serif; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+        .sort-indicator { display: inline-block; margin-left: 4px; opacity: 0.4; }
+        .sort-active .sort-indicator { opacity: 1; }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { background-color: #f0fdf4; }
+    </style>
+
+    <!-- Lucide Icons: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/lucide.js';
+            s.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+            s.onerror = function () {
+                var cdn = document.createElement('script');
+                cdn.src = 'https://unpkg.com/lucide@latest';
+                cdn.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+                document.head.appendChild(cdn);
+            };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+
+    <div id="layout-wrapper">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-3xl font-bold tracking-tight">Finances</h2>
+                <div class="space-x-2">
+                    <button id="openTransactionModalBtn"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        Add Transaction
+                    </button>
+                    <button id="openExpectedModalBtn"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Expected Transactions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="grid gap-4 md:grid-cols-3">
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-sm font-medium text-gray-500">Total Income</h3>
+                    <p id="totalIncome" class="text-2xl font-bold text-green-600">+$0.00</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-sm font-medium text-gray-500">Total Expenses</h3>
+                    <p id="totalExpenses" class="text-2xl font-bold text-red-600">-$0.00</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-sm font-medium text-gray-500">Net Balance</h3>
+                    <p id="netBalance" class="text-2xl font-bold text-gray-900">$0.00</p>
+                </div>
+            </div>
+
+            <!-- ── Filter Bar ── -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap gap-3 items-end">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">From</label>
+                    <input type="date" id="filter-from" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">To</label>
+                    <input type="date" id="filter-to" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</label>
+                    <select id="filter-type" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <option value="all">All</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</label>
+                    <select id="filter-category" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <option value="all">All Categories</option>
+                        <option value="General">General</option>
+                        <option value="Tea Sales">Tea Sales</option>
+                        <option value="Supplies">Supplies</option>
+                        <option value="Salary">Salary</option>
+                        <option value="Utility">Utility</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Search</label>
+                    <input type="text" id="filter-search" placeholder="Description..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                </div>
+                <button id="clearFiltersBtn" class="ml-auto px-3 py-2 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    Clear Filters
+                </button>
+                <span id="filterCount" class="text-xs text-gray-400 self-center"></span>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="date">Date<span class="sort-indicator">↕</span></th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="description">Description<span class="sort-indicator">↕</span></th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="category">Category<span class="sort-indicator">↕</span></th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="amount">Amount<span class="sort-indicator">↕</span></th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Data populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Transaction Modal -->
+    <div id="newTransactionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Add New Transaction</h3>
+                <div class="mt-2 px-7 py-3">
+                    <input type="date" id="fin-date" class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <input type="text" id="fin-description" placeholder="Description"
+                        class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <select id="fin-type" class="mb-3 px-3 py-2 border rounded w-full">
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
+                    <select id="fin-category" class="mb-3 px-3 py-2 border rounded w-full">
+                        <option value="General">General</option>
+                        <option value="Tea Sales">Tea Sales</option>
+                        <option value="Supplies">Supplies</option>
+                        <option value="Salary">Salary</option>
+                        <option value="Utility">Utility</option>
+                    </select>
+                    <select id="fin-accountId" class="mb-3 px-3 py-2 border rounded w-full" required>
+                        <!-- Accounts populated here -->
+                    </select>
+                    <input type="number" id="fin-amount" placeholder="Amount"
+                        class="mb-3 px-3 py-2 border rounded w-full" step="0.01" required>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="createTransactionBtn"
+                        class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
+                        Save Transaction
+                    </button>
+                    <button id="cancelTransactionBtn"
+                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expected / Future Transactions Modal -->
+    <div id="expectedTransactionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-10 mx-auto p-5 border w-[600px] shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-gray-900">Expected &amp; Future Transactions</h3>
+                    <button id="closeExpectedModalBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+                </div>
+                
+                <!-- Add Expected Form -->
+                <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200 text-left">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">Add Expected Income / Expense</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Date</label>
+                            <input type="date" id="exp-date" class="px-3 py-2 border rounded text-sm w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Description</label>
+                            <input type="text" id="exp-description" placeholder="e.g. Next month salary" class="px-3 py-2 border rounded text-sm w-full" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Type</label>
+                            <select id="exp-type" class="px-3 py-2 border rounded text-sm w-full">
+                                <option value="income">Income</option>
+                                <option value="expense">Expense</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Category</label>
+                            <select id="exp-category" class="px-3 py-2 border rounded text-sm w-full">
+                                <option value="General">General</option>
+                                <option value="Tea Sales">Tea Sales</option>
+                                <option value="Supplies">Supplies</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Utility">Utility</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Target Account</label>
+                            <select id="exp-accountId" class="px-3 py-2 border rounded text-sm w-full">
+                                <!-- Populated with accounts -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Expected Amount</label>
+                            <input type="number" id="exp-amount" placeholder="Amount" class="px-3 py-2 border rounded text-sm w-full" step="0.01" required>
+                        </div>
+                        <!-- Recurring -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Recurring</label>
+                            <select id="exp-recurring" class="px-3 py-2 border rounded text-sm w-full">
+                                <option value="none">One-time</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="biweekly">Bi-weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
+                        <div id="exp-endDate-wrapper">
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">End Date <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <input type="date" id="exp-endDate" class="px-3 py-2 border rounded text-sm w-full">
+                        </div>
+                    </div>
+                    <button id="saveExpectedBtn" class="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium text-sm transition-colors">
+                        Add Future Transaction
+                    </button>
+                </div>
+
+                <!-- List of Expected Transactions -->
+                <h4 class="text-sm font-semibold text-gray-700 mb-2 text-left">Pending Future Transactions</h4>
+                <div class="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Recurring</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expectedTableBody" class="divide-y divide-gray-200 bg-white">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/layout.js"></script>
+    <script>
+        let accountsMap = {};
+        let allEntries = [];
+        let sortCol = 'date';
+        let sortDir = 'desc';
+
+        // ── Confirm-before-close ──────────────────────────────────────────────
+        function hasInputValues(modalId) {
+            const inputs = document.querySelectorAll(`#${modalId} input:not([type=hidden]), #${modalId} textarea`);
+            return [...inputs].some(el => el.value.trim() !== '');
+        }
+
+        function closeModalSafe(modalId) {
+            if (hasInputValues(modalId)) {
+                if (!confirm('You have unsaved data. Close anyway?')) return;
+            }
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        document.getElementById('openTransactionModalBtn').addEventListener('click', () => {
+            document.getElementById('fin-date').valueAsDate = new Date();
+            document.getElementById('newTransactionModal').classList.remove('hidden');
+        });
+        document.getElementById('cancelTransactionBtn').addEventListener('click', () => closeModalSafe('newTransactionModal'));
+        document.getElementById('newTransactionModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('newTransactionModal')) closeModalSafe('newTransactionModal');
+        });
+
+        // ── Filter controls ────────────────────────────────────────────────────
+        ['filter-from','filter-to','filter-type','filter-category','filter-search'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => applyFilters());
+            document.getElementById(id).addEventListener('change', () => applyFilters());
+        });
+
+        document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+            ['filter-from','filter-to','filter-search'].forEach(id => document.getElementById(id).value = '');
+            ['filter-type','filter-category'].forEach(id => document.getElementById(id).value = id === 'filter-type' ? 'all' : 'all');
+            applyFilters();
+        });
+
+        function applyFilters() {
+            const from = document.getElementById('filter-from').value;
+            const to = document.getElementById('filter-to').value;
+            const type = document.getElementById('filter-type').value;
+            const category = document.getElementById('filter-category').value;
+            const search = document.getElementById('filter-search').value.toLowerCase();
+
+            let filtered = allEntries.filter(e => {
+                if (from && e.date < from) return false;
+                if (to && e.date > to) return false;
+                if (type === 'income' && e.amount < 0) return false;
+                if (type === 'expense' && e.amount >= 0) return false;
+                if (category !== 'all' && e.category !== category) return false;
+                if (search && !e.description.toLowerCase().includes(search)) return false;
+                return true;
+            });
+
+            const count = filtered.length;
+            const total = allEntries.length;
+            document.getElementById('filterCount').textContent = count < total ? `Showing ${count} of ${total}` : '';
+
+            renderTable(filtered);
+        }
+
+        // ── Sorting ───────────────────────────────────────────────────────────
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                sortDir = sortCol === col ? (sortDir === 'asc' ? 'desc' : 'asc') : 'asc';
+                sortCol = col;
+                updateSortHeaders();
+                applyFilters();
+            });
+        });
+
+        function updateSortHeaders() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                const col = th.dataset.col;
+                const ind = th.querySelector('.sort-indicator');
+                th.classList.toggle('sort-active', col === sortCol);
+                ind.textContent = col === sortCol ? (sortDir === 'asc' ? '↑' : '↓') : '↕';
+            });
+        }
+
+        function sortedEntries(entries) {
+            return [...entries].sort((a, b) => {
+                let av = a[sortCol] ?? '';
+                let bv = b[sortCol] ?? '';
+                if (typeof av === 'number' && typeof bv === 'number') return sortDir === 'asc' ? av - bv : bv - av;
+                av = String(av).toLowerCase(); bv = String(bv).toLowerCase();
+                return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+            });
+        }
+
+        // ── Render table ──────────────────────────────────────────────────────
+        function renderTable(entries) {
+            const tbody = document.getElementById('transactionsTableBody');
+            tbody.innerHTML = '';
+
+            let income = 0, expenses = 0;
+
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No transactions found.</td></tr>';
+            } else {
+                sortedEntries(entries).forEach(entry => {
+                    if (entry.amount >= 0) income += entry.amount;
+                    else expenses += Math.abs(entry.amount);
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50 transition-colors';
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${entry.description}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.category}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${accountsMap[entry.accountId] || 'Unknown'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${entry.amount >= 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${entry.amount >= 0 ? '+' : '-'}${formatCurrency(Math.abs(entry.amount))}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="deleteEntry('${entry.id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Summary cards reflect filtered result
+            document.getElementById('totalIncome').textContent = `+${formatCurrency(income)}`;
+            document.getElementById('totalExpenses').textContent = `-${formatCurrency(expenses)}`;
+            const net = income - expenses;
+            const netEl = document.getElementById('netBalance');
+            netEl.textContent = formatCurrency(net);
+            netEl.className = `text-2xl font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        }
+
+        async function loadData() {
+            try {
+                const accounts = await API.get('/accounts/');
+                const accountSelect = document.getElementById('fin-accountId');
+                const expAccountSelect = document.getElementById('exp-accountId');
+                accountSelect.innerHTML = '<option value="" disabled selected>Select Account</option>';
+                expAccountSelect.innerHTML = '<option value="" disabled selected>Select Account</option>';
+                accountsMap = {};
+                accounts.forEach(acc => {
+                    accountsMap[acc.id] = acc.name;
+                    const opt = document.createElement('option');
+                    opt.value = acc.id;
+                    opt.textContent = acc.name;
+                    accountSelect.appendChild(opt);
+                    expAccountSelect.appendChild(opt.cloneNode(true));
+                });
+
+                allEntries = await API.get('/finances/');
+                updateSortHeaders();
+                applyFilters();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm('Are you sure you want to delete this transaction?')) return;
+            try {
+                await API.delete(`/finances/${id}`);
+                loadData();
+            } catch (error) {
+                alert('Failed to delete transaction');
+            }
+        }
+        window.deleteEntry = deleteEntry;
+
+        document.getElementById('createTransactionBtn').addEventListener('click', async () => {
+            let amount = parseFloat(document.getElementById('fin-amount').value);
+            const type = document.getElementById('fin-type').value;
+            if (type === 'expense') amount = -Math.abs(amount);
+
+            const data = {
+                date: document.getElementById('fin-date').value,
+                description: document.getElementById('fin-description').value,
+                category: document.getElementById('fin-category').value,
+                accountId: document.getElementById('fin-accountId').value,
+                amount
+            };
+
+            if (!data.accountId) { alert('Please select an account'); return; }
+
+            try {
+                await API.post('/finances/', data);
+                document.getElementById('newTransactionModal').classList.add('hidden');
+                loadData();
+                document.querySelectorAll('#newTransactionModal input').forEach(el => el.value = '');
+            } catch (error) {
+                alert('Failed to create transaction');
+                console.error(error);
+            }
+        });
+
+        // ── Expected Transactions ──────────────────────────────────────────────
+        let expectedTransactions = [];
+
+        // Show/hide end date based on recurring selection
+        document.getElementById('exp-recurring').addEventListener('change', (e) => {
+            document.getElementById('exp-endDate-wrapper').style.display = e.target.value === 'none' ? 'none' : '';
+        });
+        document.getElementById('exp-endDate-wrapper').style.display = 'none';
+
+        document.getElementById('openExpectedModalBtn').addEventListener('click', () => {
+            document.getElementById('exp-date').valueAsDate = new Date();
+            document.getElementById('expectedTransactionsModal').classList.remove('hidden');
+            loadExpectedTransactions();
+        });
+
+        document.getElementById('closeExpectedModalBtn').addEventListener('click', () => {
+            document.getElementById('expectedTransactionsModal').classList.add('hidden');
+        });
+        document.getElementById('expectedTransactionsModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('expectedTransactionsModal'))
+                document.getElementById('expectedTransactionsModal').classList.add('hidden');
+        });
+
+        async function loadExpectedTransactions() {
+            try {
+                expectedTransactions = await API.get('/expected-expenses/');
+                const tbody = document.getElementById('expectedTableBody');
+                tbody.innerHTML = '';
+
+                if (expectedTransactions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500">No expected transactions.</td></tr>';
+                    return;
+                }
+
+                expectedTransactions.forEach(tx => {
+                    const tr = document.createElement('tr');
+                    const isExpense = tx.type === 'expense';
+                    const recurringLabel = tx.recurring && tx.recurring !== 'none'
+                        ? `<span class="inline-block px-1.5 py-0.5 text-xs bg-blue-50 text-blue-600 rounded font-medium capitalize">${tx.recurring}</span>`
+                        : '<span class="text-gray-400 text-xs">One-time</span>';
+                    tr.innerHTML = `
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-500">${tx.date}</td>
+                        <td class="px-3 py-2 whitespace-nowrap font-medium text-gray-900">${tx.description}</td>
+                        <td class="px-3 py-2 whitespace-nowrap">${recurringLabel}</td>
+                        <td class="px-3 py-2 whitespace-nowrap font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}">
+                            ${isExpense ? '-' : '+'}${formatCurrency(tx.amount)}
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap space-x-2">
+                            <button onclick="executeExpectedTransaction('${tx.id}')" class="text-green-600 hover:text-green-900 font-semibold">Execute</button>
+                            <button onclick="deleteExpectedTransaction('${tx.id}')" class="text-red-600 hover:text-red-900 font-semibold">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Error loading expected transactions:', error);
+            }
+        }
+
+        document.getElementById('saveExpectedBtn').addEventListener('click', async () => {
+            const date = document.getElementById('exp-date').value;
+            const description = document.getElementById('exp-description').value;
+            const type = document.getElementById('exp-type').value;
+            const category = document.getElementById('exp-category').value;
+            const accountId = document.getElementById('exp-accountId').value;
+            const amount = parseFloat(document.getElementById('exp-amount').value);
+            const recurring = document.getElementById('exp-recurring').value;
+            const endDate = document.getElementById('exp-endDate').value;
+
+            if (!description || isNaN(amount) || !accountId) {
+                alert('Please fill out all fields and select a target account.');
+                return;
+            }
+
+            const data = { date, description, type, category, accountId, amount, recurring, endDate: endDate || null };
+
+            try {
+                await API.post('/expected-expenses/', data);
+                document.getElementById('exp-description').value = '';
+                document.getElementById('exp-amount').value = '';
+                document.getElementById('exp-endDate').value = '';
+                document.getElementById('exp-recurring').value = 'none';
+                document.getElementById('exp-endDate-wrapper').style.display = 'none';
+                loadExpectedTransactions();
+            } catch (error) {
+                alert('Failed to add expected transaction');
+                console.error(error);
+            }
+        });
+
+        async function executeExpectedTransaction(id) {
+            const tx = expectedTransactions.find(t => t.id === id);
+            if (!tx) return;
+            if (!confirm(`Execute "${tx.description}"? This adds it as an actual transaction.`)) return;
+
+            let amount = tx.amount;
+            if (tx.type === 'expense') amount = -Math.abs(amount);
+
+            try {
+                await API.post('/finances/', { date: tx.date, description: tx.description, category: tx.category, accountId: tx.accountId, amount });
+
+                // If recurring, schedule next occurrence instead of deleting
+                if (tx.recurring && tx.recurring !== 'none') {
+                    const nextDate = getNextDate(tx.date, tx.recurring);
+                    const shouldContinue = !tx.endDate || nextDate <= tx.endDate;
+                    if (shouldContinue) {
+                        await API.put(`/expected-expenses/${id}`, { ...tx, date: nextDate });
+                    } else {
+                        await API.delete(`/expected-expenses/${id}`);
+                    }
+                } else {
+                    await API.delete(`/expected-expenses/${id}`);
+                }
+
+                loadData();
+                loadExpectedTransactions();
+            } catch (error) {
+                alert('Failed to execute transaction');
+                console.error(error);
+            }
+        }
+
+        function getNextDate(dateStr, recurring) {
+            const d = new Date(dateStr);
+            switch (recurring) {
+                case 'weekly':     d.setDate(d.getDate() + 7); break;
+                case 'biweekly':   d.setDate(d.getDate() + 14); break;
+                case 'monthly':    d.setMonth(d.getMonth() + 1); break;
+                case 'quarterly':  d.setMonth(d.getMonth() + 3); break;
+                case 'yearly':     d.setFullYear(d.getFullYear() + 1); break;
+            }
+            return d.toISOString().slice(0, 10);
+        }
+
+        async function deleteExpectedTransaction(id) {
+            if (!confirm('Are you sure you want to delete this expected transaction?')) return;
+            try {
+                await API.delete(`/expected-expenses/${id}`);
+                loadExpectedTransactions();
+            } catch (error) {
+                alert('Failed to delete expected transaction');
+                console.error(error);
+            }
+        }
+
+        window.executeExpectedTransaction = executeExpectedTransaction;
+        window.deleteExpectedTransaction = deleteExpectedTransaction;
+
+        window.addEventListener('settingsLoaded', loadData, { once: true });
+    </script>
+
+    <script src="js/back-button.js"></script>
+</body>
+</html>

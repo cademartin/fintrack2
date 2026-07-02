@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tea Tracker — Settings</title>
+    <meta name="description" content="Configure your Tea Tracker appearance, currency, and account details.">
+
+    <!-- Capacitor Bridge (injected at build time) -->
+    <script src="capacitor.js"></script>
+
+    <!-- Tailwind CSS: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/tailwind.js';
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Outfit Font: Local-First -->
+    <style>
+        @font-face { font-family: 'Outfit'; font-weight: 300; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-300.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-400.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-600.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 800; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-800.woff2') format('woff2'); }
+        body {
+            font-family: 'Outfit', sans-serif;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+    </style>
+
+    <!-- Lucide Icons: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/lucide.js';
+            s.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Offline JS Engine & API -->
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+
+    <div id="layout-wrapper">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-3xl font-bold tracking-tight">Settings</h2>
+            </div>
+
+            <!-- ── Appearance ──────────────────────────────────────────────── -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+                <form class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Theme</label>
+                        <select id="s-theme"
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="system">System</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Currency</label>
+                        <select id="s-currency"
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="KES">KES (Ksh)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Primary Color</label>
+                        <div class="mt-1 flex items-center space-x-2">
+                            <input type="color" id="s-primaryColor"
+                                class="h-8 w-8 rounded border border-gray-300" value="#16a34a">
+                            <span id="s-primaryColorDisplay" class="text-sm text-gray-500">#16a34a</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Secondary Color</label>
+                        <div class="mt-1 flex items-center space-x-2">
+                            <input type="color" id="s-secondaryColor"
+                                class="h-8 w-8 rounded border border-gray-300" value="#ffffff">
+                            <span id="s-secondaryColorDisplay" class="text-sm text-gray-500">#ffffff</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Background Color</label>
+                        <div class="mt-1 flex items-center space-x-2">
+                            <input type="color" id="s-backgroundColor"
+                                class="h-8 w-8 rounded border border-gray-300" value="#ffffff">
+                            <span id="s-backgroundColorDisplay" class="text-sm text-gray-500">#ffffff</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Font Family</label>
+                        <select id="s-fontFamily"
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                            <option value="Outfit">Outfit (Default)</option>
+                            <option value="Inter">Inter</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Serif">Serif</option>
+                            <option value="Monospace">Monospace</option>
+                            <option value="Comic Sans MS">Comic Sans (Fun)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Font Size</label>
+                        <div class="mt-1 flex items-center space-x-4">
+                            <input type="range" id="s-fontSize" min="12" max="24" step="1"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" value="16">
+                            <span id="s-fontSizeDisplay" class="text-sm font-medium text-gray-700 min-w-[2.5rem] text-right">16px</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="button" id="saveSettingsBtn"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ── Account Details ─────────────────────────────────────────── -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+                <h3 class="text-lg font-medium leading-6 text-gray-900 mb-1">Account Details</h3>
+                <p class="text-sm text-gray-500 mb-5">Update your login username or password.</p>
+
+                <!-- Feedback banner -->
+                <div id="account-msg" class="hidden mb-4 px-4 py-3 rounded-xl text-sm font-medium"></div>
+
+                <div class="space-y-5">
+                    <!-- Current username (read-only) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Username</label>
+                        <p id="current-username-display"
+                            class="text-sm text-gray-900 font-semibold px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 inline-block min-w-32">
+                            —
+                        </p>
+                    </div>
+
+                    <!-- New username -->
+                    <div>
+                        <label for="new-username" class="block text-sm font-medium text-gray-700 mb-1">
+                            New Username
+                            <span class="text-gray-400 font-normal">(leave blank to keep current)</span>
+                        </label>
+                        <input id="new-username" type="text" placeholder="Enter new username"
+                            autocomplete="username"
+                            class="block w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition" />
+                    </div>
+
+                    <!-- Current password (required) -->
+                    <div>
+                        <label for="current-password" class="block text-sm font-medium text-gray-700 mb-1">
+                            Current Password <span class="text-red-500">*</span>
+                        </label>
+                        <input id="current-password" type="password" placeholder="Enter your current password"
+                            autocomplete="current-password"
+                            class="block w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition" />
+                    </div>
+
+                    <!-- New password -->
+                    <div>
+                        <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">
+                            New Password
+                            <span class="text-gray-400 font-normal">(leave blank to keep current)</span>
+                        </label>
+                        <input id="new-password" type="password" placeholder="Enter new password"
+                            autocomplete="new-password"
+                            class="block w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition" />
+                    </div>
+
+                    <div class="pt-1">
+                        <button id="btn-save-account" type="button"
+                            class="inline-flex items-center gap-2 py-2 px-5 text-sm font-semibold rounded-lg text-white bg-green-600 hover:bg-green-700 active:scale-95 transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Save Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Data Management ─────────────────────────────────────────── -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+                <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Data Management</h3>
+                <p class="text-sm text-gray-500 mb-4">Export your data to JSON for backup or import from a JSON file.</p>
+                <div class="flex space-x-4">
+                    <button type="button" id="exportDataBtn"
+                        class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        Export Data
+                    </button>
+                    <label
+                        class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 cursor-pointer">
+                        Import Data
+                        <input type="file" id="importFileInput" class="hidden" accept=".json">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/layout.js"></script>
+    <script src="js/back-button.js"></script>
+    <script>
+        // ── Load settings into form ───────────────────────────────────────
+        async function loadSettings() {
+            try {
+                const settings = await API.get('/settings/');
+                document.getElementById('s-theme').value        = settings.theme        || 'light';
+                document.getElementById('s-currency').value     = settings.currency     || 'USD';
+                document.getElementById('s-fontFamily').value   = settings.fontFamily   || 'Outfit';
+
+                document.getElementById('s-primaryColor').value         = settings.primaryColor    || '#16a34a';
+                document.getElementById('s-primaryColorDisplay').innerText = settings.primaryColor || '#16a34a';
+
+                document.getElementById('s-secondaryColor').value          = settings.secondaryColor    || '#ffffff';
+                document.getElementById('s-secondaryColorDisplay').innerText = settings.secondaryColor  || '#ffffff';
+
+                document.getElementById('s-backgroundColor').value           = settings.backgroundColor    || '#ffffff';
+                document.getElementById('s-backgroundColorDisplay').innerText  = settings.backgroundColor  || '#ffffff';
+
+                const fontSize = settings.fontSize || 16;
+                document.getElementById('s-fontSize').value = fontSize;
+                document.getElementById('s-fontSizeDisplay').innerText = fontSize + 'px';
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+            }
+        }
+
+        // Colour picker → display label sync
+        ['s-primaryColor', 's-secondaryColor', 's-backgroundColor'].forEach(id => {
+            document.getElementById(id).addEventListener('input', e => {
+                document.getElementById(id + 'Display').innerText = e.target.value;
+            });
+        });
+
+        // Font size slider → display label sync
+        document.getElementById('s-fontSize').addEventListener('input', e => {
+            document.getElementById('s-fontSizeDisplay').innerText = e.target.value + 'px';
+        });
+
+        // ── Save settings ─────────────────────────────────────────────────
+        document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+            try {
+                const currentSettings = await API.get('/settings/') || {};
+                const data = {
+                    ...currentSettings,
+                    theme:           document.getElementById('s-theme').value,
+                    currency:        document.getElementById('s-currency').value,
+                    primaryColor:    document.getElementById('s-primaryColor').value,
+                    secondaryColor:  document.getElementById('s-secondaryColor').value,
+                    backgroundColor: document.getElementById('s-backgroundColor').value,
+                    fontFamily:      document.getElementById('s-fontFamily').value,
+                    fontSize:        parseInt(document.getElementById('s-fontSize').value) || 16,
+                };
+                await API.put('/settings/', data);
+                alert('Settings saved successfully!');
+                window.location.reload();
+            } catch (e) {
+                alert('Failed to save settings.');
+                console.error(e);
+            }
+        });
+
+        // ── Load current username ─────────────────────────────────────────
+        async function loadUsername() {
+            try {
+                const name = LocalAPI.get_current_username();
+                document.getElementById('current-username-display').textContent = name || '—';
+            } catch (e) {
+                console.error('Failed to get username:', e);
+            }
+        }
+
+        // ── Save account details ──────────────────────────────────────────
+        document.getElementById('btn-save-account').addEventListener('click', async () => {
+            const newUsername     = document.getElementById('new-username').value.trim();
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword     = document.getElementById('new-password').value;
+            const btn             = document.getElementById('btn-save-account');
+
+            if (!currentPassword) {
+                showAccountMsg('Current password is required.', 'error');
+                return;
+            }
+            if (!newUsername && !newPassword) {
+                showAccountMsg('Enter a new username and/or new password to save.', 'error');
+                return;
+            }
+
+            btn.disabled    = true;
+            btn.textContent = 'Saving…';
+
+            try {
+                const result = await LocalAPI.update_account_details({
+                    current_password: currentPassword,
+                    new_username:     newUsername || null,
+                    new_password:     newPassword || null
+                });
+
+                if (result.success) {
+                    showAccountMsg(result.message || 'Account updated successfully!', 'success');
+                    if (newUsername) {
+                        document.getElementById('current-username-display').textContent = newUsername;
+                    }
+                    document.getElementById('new-username').value      = '';
+                    document.getElementById('current-password').value  = '';
+                    document.getElementById('new-password').value      = '';
+                    if (newUsername) {
+                        setTimeout(() => window.location.reload(), 1200);
+                    }
+                } else {
+                    showAccountMsg(result.message || 'Failed to update account.', 'error');
+                }
+            } catch (err) {
+                showAccountMsg('Error updating account.', 'error');
+                console.error(err);
+            } finally {
+                btn.disabled  = false;
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg> Save Account`;
+            }
+        });
+
+        function showAccountMsg(text, type) {
+            const el = document.getElementById('account-msg');
+            el.textContent = text;
+            el.className = 'mb-4 px-4 py-3 rounded-xl text-sm font-medium ' +
+                (type === 'success'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200');
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+
+        // ── Export ────────────────────────────────────────────────────────
+        document.getElementById('exportDataBtn').addEventListener('click', async () => {
+            try {
+                const data = await LocalAPI.export_data();
+
+                const hasCapacitor = typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform();
+                if (hasCapacitor) {
+                    const { Filesystem, Share } = window.Capacitor.Plugins;
+                    if (Filesystem && Share) {
+                        const filename = 'tea_tracker_backup.json';
+                        const fileResult = await Filesystem.writeFile({
+                            path: filename,
+                            data: JSON.stringify(data, null, 2),
+                            directory: 'CACHE',
+                            encoding: 'utf8'
+                        });
+
+                        await Share.share({
+                            title: 'Tea Tracker Backup',
+                            text: 'Here is your Tea Tracker backup data.',
+                            url: fileResult.uri,
+                            dialogTitle: 'Share or Save Backup'
+                        });
+                        return;
+                    }
+                }
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href     = url;
+                a.download = 'tea_tracker_backup.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                alert('Export failed.');
+                console.error(e);
+            }
+        });
+
+        // ── Import ────────────────────────────────────────────────────────
+        document.getElementById('importFileInput').addEventListener('change', function () {
+            if (!this.files || !this.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!confirm('This will overwrite all current data. Are you sure?')) {
+                        this.value = '';
+                        return;
+                    }
+                    const result = await LocalAPI.import_data(data);
+                    alert(result.message || 'Data imported successfully');
+                    window.location.reload();
+                } catch (err) {
+                    alert('Invalid JSON file or import failed.');
+                    console.error(err);
+                }
+                this.value = '';
+            };
+            reader.readAsText(this.files[0]);
+        });
+
+        // ── Init ──────────────────────────────────────────────────────────
+        window.addEventListener('settingsLoaded', async () => {
+            await loadSettings();
+            await loadUsername();
+        }, { once: true });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tea Tracker — Sign In</title>
+    <meta name="description" content="Sign in or create an account to access your Tea Tracker dashboard.">
+
+    <!-- Capacitor Bridge (injected at build time) -->
+    <script src="capacitor.js"></script>
+
+    <!-- Tailwind CSS: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/tailwind.js';
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Outfit Font: Local-First -->
+    <style>
+        @font-face { font-family: 'Outfit'; font-weight: 300; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-300.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-400.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-600.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 800; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-800.woff2') format('woff2'); }
+        body {
+            font-family: 'Outfit', sans-serif;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+    </style>
+
+    <!-- Lucide Icons: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/lucide.js';
+            s.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Offline JS Engine -->
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+
+    <!-- Login Card -->
+    <div class="w-full max-w-md">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl shadow-lg mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900">Tea Tracker</h1>
+            <p class="text-gray-500 mt-1">Manage your tea business</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <!-- Error Banner -->
+            <div id="error-banner" class="hidden mb-4 px-4 py-3 rounded-xl text-sm font-medium bg-red-50 text-red-700 border border-red-200"></div>
+
+            <!-- Tabs -->
+            <div class="flex rounded-xl bg-gray-100 p-1 mb-6">
+                <button id="loginTabBtn" onclick="switchTab('login')"
+                    class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-gray-900 shadow-sm transition-all">
+                    Sign In
+                </button>
+                <button id="registerTabBtn" onclick="switchTab('register')"
+                    class="flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 transition-all">
+                    Register
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input id="login-username" type="text" placeholder="Enter your username"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input id="login-password" type="password" placeholder="Enter your password"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50">
+                    </div>
+                    <button id="loginBtn"
+                        class="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors text-sm shadow-sm active:scale-95">
+                        Sign In
+                    </button>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input id="reg-username" type="text" placeholder="Choose a username"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input id="reg-password" type="password" placeholder="Choose a password (min 4 chars)"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50">
+                    </div>
+                    <button id="registerBtn"
+                        class="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors text-sm shadow-sm active:scale-95">
+                        Create Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/back-button.js"></script>
+    <script>
+        // Check if already logged in
+        const existingSession = Session.get();
+        if (existingSession) {
+            DB.init(existingSession);
+            window.location.href = 'dashboard.html';
+        }
+
+        function showError(msg) {
+            const banner = document.getElementById('error-banner');
+            banner.textContent = msg;
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 4000);
+        }
+
+        function switchTab(tab) {
+            const isLogin = tab === 'login';
+            document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
+            document.getElementById('registerForm').classList.toggle('hidden', isLogin);
+
+            const loginTabBtn = document.getElementById('loginTabBtn');
+            const registerTabBtn = document.getElementById('registerTabBtn');
+            if (isLogin) {
+                loginTabBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-gray-900 shadow-sm transition-all';
+                registerTabBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 transition-all';
+            } else {
+                registerTabBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-gray-900 shadow-sm transition-all';
+                loginTabBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 transition-all';
+            }
+            document.getElementById('error-banner').classList.add('hidden');
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            if (!username || !password) { showError('Please enter username and password.'); return; }
+
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.textContent = 'Signing in...';
+            try {
+                const result = await LocalAPI.login(username, password);
+                if (result.success) {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    showError(result.message || 'Login failed.');
+                }
+            } catch (err) {
+                showError(err.message || 'Login failed.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Sign In';
+            }
+        });
+
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+            if (!username || !password) { showError('Please fill in all fields.'); return; }
+
+            const btn = document.getElementById('registerBtn');
+            btn.disabled = true; btn.textContent = 'Creating...';
+            try {
+                const result = await LocalAPI.register(username, password);
+                if (result.success) {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    showError(result.message || 'Registration failed.');
+                }
+            } catch (err) {
+                showError(err.message || 'Registration failed.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Create Account';
+            }
+        });
+
+        // Allow Enter key
+        document.getElementById('login-password').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('loginBtn').click();
+        });
+        document.getElementById('reg-password').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('registerBtn').click();
+        });
+    </script>
+</body>
+</html>

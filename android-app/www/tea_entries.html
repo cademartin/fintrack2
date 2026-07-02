@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tea Tracker — Tea Entries</title>
+    <meta name="description" content="Manage your tea collection entries.">
+
+    <script src="capacitor.js"></script>
+
+    <!-- Tailwind CSS: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/tailwind.js';
+            s.onerror = function () {
+                var cdn = document.createElement('script');
+                cdn.src = 'https://cdn.tailwindcss.com';
+                document.head.appendChild(cdn);
+            };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Outfit Font: Local-First -->
+    <style>
+        @font-face { font-family: 'Outfit'; font-weight: 300; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-300.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-400.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-600.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 800; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-800.woff2') format('woff2'); }
+        body { font-family: 'Outfit', sans-serif; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+        .sort-indicator { display: inline-block; margin-left: 4px; opacity: 0.4; }
+        .sort-active .sort-indicator { opacity: 1; }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { background-color: #f0fdf4; }
+    </style>
+
+    <!-- Lucide Icons: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/lucide.js';
+            s.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+            s.onerror = function () {
+                var cdn = document.createElement('script');
+                cdn.src = 'https://unpkg.com/lucide@latest';
+                cdn.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+                document.head.appendChild(cdn);
+            };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+
+    <div id="layout-wrapper">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-3xl font-bold tracking-tight">Tea Entries</h2>
+                <button id="openNewEntryModalBtn"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    Add Entry
+                </button>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="date">Date<span class="sort-indicator">↕</span></th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="teaNumber">Tea Number<span class="sort-indicator">↕</span></th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="kilograms">Kilograms<span class="sort-indicator">↕</span></th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="amountPerKg">Amount/Kg<span class="sort-indicator">↕</span></th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="amountToPay">To Pay<span class="sort-indicator">↕</span></th>
+                            <th class="sortable px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-col="amountToReceive">To Receive<span class="sort-indicator">↕</span></th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form of Pay</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entriesTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Entries populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Entry Modal -->
+    <div id="newEntryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Add New Entry</h3>
+                <div class="mt-2 px-7 py-3">
+                    <input type="date" id="te-date" class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <input type="text" id="te-teaNumber" placeholder="Tea Number (e.g. A123)"
+                        class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <input type="number" id="te-kilograms" placeholder="Kilograms"
+                        class="mb-3 px-3 py-2 border rounded w-full" step="0.01" required>
+                    <input type="number" id="te-amountPerKg" placeholder="Cost Amount / Kg"
+                        class="mb-3 px-3 py-2 border rounded w-full" step="0.01" required>
+                    <div class="mb-3 px-3 py-2 border rounded w-full bg-gray-100 text-gray-700 text-left">
+                        <span class="text-sm text-gray-500">Sell Amount / Kg (constant):</span>
+                        <span class="font-semibold ml-2">30.00</span>
+                    </div>
+                    <input type="text" id="te-formOfPay" placeholder="Form of Pay (e.g. Cash)"
+                        class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <textarea id="te-notes" placeholder="Notes" class="mb-3 px-3 py-2 border rounded w-full"></textarea>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="createEntryBtn"
+                        class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
+                        Create Entry
+                    </button>
+                    <button id="cancelEntryBtn"
+                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Entry Modal -->
+    <div id="editEntryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 text-blue-700">Edit Entry</h3>
+                <div class="mt-2 px-7 py-3">
+                    <input type="hidden" id="edit-te-id">
+                    <input type="date" id="edit-te-date" class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <input type="text" id="edit-te-teaNumber" placeholder="Tea Number (e.g. A123)"
+                        class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <input type="number" id="edit-te-kilograms" placeholder="Kilograms"
+                        class="mb-3 px-3 py-2 border rounded w-full" step="0.01" required>
+                    <input type="number" id="edit-te-amountPerKg" placeholder="Cost Amount / Kg"
+                        class="mb-3 px-3 py-2 border rounded w-full" step="0.01" required>
+                    <div class="mb-3 px-3 py-2 border rounded w-full bg-gray-100 text-gray-700 text-left">
+                        <span class="text-sm text-gray-500">Sell Amount / Kg (constant):</span>
+                        <span class="font-semibold ml-2">30.00</span>
+                    </div>
+                    <input type="text" id="edit-te-formOfPay" placeholder="Form of Pay (e.g. Cash)"
+                        class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <textarea id="edit-te-notes" placeholder="Notes" class="mb-3 px-3 py-2 border rounded w-full"></textarea>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="saveEditEntryBtn"
+                        class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                        Save Changes
+                    </button>
+                    <button id="cancelEditEntryBtn"
+                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/layout.js"></script>
+    <script>
+        let allEntries = [];
+        let sortCol = 'date';
+        let sortDir = 'desc';
+
+        // ── Modal helpers ─────────────────────────────────────────────────────
+        function hasInputValues(modalId) {
+            const inputs = document.querySelectorAll(`#${modalId} input:not([type=hidden]), #${modalId} textarea`);
+            return [...inputs].some(el => el.value.trim() !== '');
+        }
+
+        function closeModalSafe(modalId) {
+            if (hasInputValues(modalId)) {
+                if (!confirm('You have unsaved data. Close anyway?')) return;
+            }
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Open new entry modal
+        document.getElementById('openNewEntryModalBtn').addEventListener('click', () => {
+            document.getElementById('te-date').valueAsDate = new Date();
+            document.getElementById('newEntryModal').classList.remove('hidden');
+        });
+
+        // Cancel / backdrop close — new modal
+        document.getElementById('cancelEntryBtn').addEventListener('click', () => closeModalSafe('newEntryModal'));
+        document.getElementById('newEntryModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('newEntryModal')) closeModalSafe('newEntryModal');
+        });
+
+        // Cancel / backdrop close — edit modal
+        document.getElementById('cancelEditEntryBtn').addEventListener('click', () => closeModalSafe('editEntryModal'));
+        document.getElementById('editEntryModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('editEntryModal')) closeModalSafe('editEntryModal');
+        });
+
+        // ── Sorting ───────────────────────────────────────────────────────────
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (sortCol === col) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortCol = col;
+                    sortDir = 'asc';
+                }
+                updateSortHeaders();
+                renderEntries(allEntries);
+            });
+        });
+
+        function updateSortHeaders() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                const col = th.dataset.col;
+                const indicator = th.querySelector('.sort-indicator');
+                th.classList.toggle('sort-active', col === sortCol);
+                if (col === sortCol) {
+                    indicator.textContent = sortDir === 'asc' ? '↑' : '↓';
+                } else {
+                    indicator.textContent = '↕';
+                }
+            });
+        }
+
+        function sortedEntries(entries) {
+            return [...entries].sort((a, b) => {
+                let av = a[sortCol] ?? '';
+                let bv = b[sortCol] ?? '';
+                if (typeof av === 'number' && typeof bv === 'number') {
+                    return sortDir === 'asc' ? av - bv : bv - av;
+                }
+                av = String(av).toLowerCase();
+                bv = String(bv).toLowerCase();
+                return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+            });
+        }
+
+        // ── Render ────────────────────────────────────────────────────────────
+        function renderEntries(entries) {
+            const tbody = document.getElementById('entriesTableBody');
+            tbody.innerHTML = '';
+
+            if (!entries || entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No entries found.</td></tr>';
+                return;
+            }
+
+            sortedEntries(entries).forEach(entry => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.teaNumber || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${entry.kilograms} kg</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(entry.amountPerKg)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(entry.amountToPay)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(entry.amountToReceive)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.formOfPay}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                        <button onclick="openEditModal('${entry.id}')" class="text-blue-600 hover:text-blue-900 font-semibold">Edit</button>
+                        <button onclick="deleteEntry('${entry.id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function loadEntries() {
+            try {
+                allEntries = await API.get('/tea-entries/');
+                updateSortHeaders();
+                renderEntries(allEntries);
+            } catch (error) {
+                console.error('Error loading entries:', error);
+            }
+        }
+
+        // ── Edit ──────────────────────────────────────────────────────────────
+        function openEditModal(id) {
+            const entry = allEntries.find(e => e.id === id);
+            if (!entry) return;
+            document.getElementById('edit-te-id').value = entry.id;
+            document.getElementById('edit-te-date').value = entry.date;
+            document.getElementById('edit-te-teaNumber').value = entry.teaNumber || '';
+            document.getElementById('edit-te-kilograms').value = entry.kilograms;
+            document.getElementById('edit-te-amountPerKg').value = entry.amountPerKg;
+            document.getElementById('edit-te-formOfPay').value = entry.formOfPay || '';
+            document.getElementById('edit-te-notes').value = entry.notes || '';
+            document.getElementById('editEntryModal').classList.remove('hidden');
+        }
+        window.openEditModal = openEditModal;
+
+        document.getElementById('saveEditEntryBtn').addEventListener('click', async () => {
+            const id = document.getElementById('edit-te-id').value;
+            const kilograms = parseFloat(document.getElementById('edit-te-kilograms').value);
+            const amountPerKg = parseFloat(document.getElementById('edit-te-amountPerKg').value);
+            const sellAmountPerKg = 30;
+
+            const data = {
+                date: document.getElementById('edit-te-date').value,
+                teaNumber: document.getElementById('edit-te-teaNumber').value,
+                kilograms,
+                amountPerKg,
+                amountToPay: kilograms * amountPerKg,
+                sellAmountPerKg,
+                amountToReceive: kilograms * sellAmountPerKg,
+                formOfPay: document.getElementById('edit-te-formOfPay').value,
+                notes: document.getElementById('edit-te-notes').value
+            };
+
+            try {
+                await API.put(`/tea-entries/${id}`, data);
+                document.getElementById('editEntryModal').classList.add('hidden');
+                loadEntries();
+            } catch (error) {
+                alert('Failed to update entry');
+                console.error(error);
+            }
+        });
+
+        // ── Delete ────────────────────────────────────────────────────────────
+        async function deleteEntry(id) {
+            if (!confirm('Are you sure you want to delete this entry?')) return;
+            try {
+                await API.delete(`/tea-entries/${id}`);
+                loadEntries();
+            } catch (error) {
+                alert('Failed to delete entry');
+            }
+        }
+        window.deleteEntry = deleteEntry;
+
+        // ── Create ────────────────────────────────────────────────────────────
+        document.getElementById('createEntryBtn').addEventListener('click', async () => {
+            const kilograms = parseFloat(document.getElementById('te-kilograms').value);
+            const amountPerKg = parseFloat(document.getElementById('te-amountPerKg').value);
+            const sellAmountPerKg = 30;
+
+            const data = {
+                date: document.getElementById('te-date').value,
+                teaNumber: document.getElementById('te-teaNumber').value,
+                kilograms,
+                amountPerKg,
+                amountToPay: kilograms * amountPerKg,
+                sellAmountPerKg,
+                amountToReceive: kilograms * sellAmountPerKg,
+                formOfPay: document.getElementById('te-formOfPay').value,
+                notes: document.getElementById('te-notes').value
+            };
+
+            try {
+                await API.post('/tea-entries/', data);
+                document.getElementById('newEntryModal').classList.add('hidden');
+                loadEntries();
+                document.querySelectorAll('#newEntryModal input, #newEntryModal textarea').forEach(el => el.value = '');
+            } catch (error) {
+                alert('Failed to create entry');
+                console.error(error);
+            }
+        });
+
+        window.addEventListener('settingsLoaded', loadEntries, { once: true });
+    </script>
+
+    <script src="js/back-button.js"></script>
+</body>
+</html>

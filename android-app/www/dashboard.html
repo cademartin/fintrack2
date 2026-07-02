@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tea Tracker — Dashboard</title>
+    <meta name="description" content="Tea Tracker dashboard — overview of your tea business metrics.">
+
+    <!-- Capacitor Bridge (injected at build time) -->
+    <script src="capacitor.js"></script>
+
+    <!-- Tailwind CSS: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/tailwind.js';
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Outfit Font: Local-First -->
+    <style>
+        @font-face { font-family: 'Outfit'; font-weight: 300; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-300.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-400.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-600.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 800; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-800.woff2') format('woff2'); }
+        body {
+            font-family: 'Outfit', sans-serif;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+    </style>
+
+    <!-- Lucide Icons: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/lucide.js';
+            s.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Chart.js: local-first with CDN fallback -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/chart.js';
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Offline JS Engine & API -->
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+
+    <div id="layout-wrapper">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-3xl font-bold tracking-tight">Dashboard</h2>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <!-- Total Tea -->
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between space-y-0 pb-2">
+                        <p class="text-sm font-medium text-gray-500">Total Tea Collected</p>
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="totalTea" class="text-2xl font-bold">0 kg</div>
+                    <p id="totalTeaSub" class="text-xs text-gray-500 mt-1">Last month: 0 kg</p>
+                </div>
+
+                <!-- Total Expenses -->
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between space-y-0 pb-2">
+                        <p class="text-sm font-medium text-gray-500">Total Expenses</p>
+                        <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                                </path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="totalExpenses" class="text-2xl font-bold">$0.00</div>
+                    <p id="totalExpensesSub" class="text-xs text-gray-500 mt-1">Last month: $0.00</p>
+                </div>
+
+                <!-- Net Profit -->
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between space-y-0 pb-2">
+                        <p class="text-sm font-medium text-gray-500">Net Profit</p>
+                        <div id="profitIcon" class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="netProfit" class="text-2xl font-bold">$0.00</div>
+                    <p id="netProfitSub" class="text-xs text-gray-500 mt-1">Last month: $0.00</p>
+                </div>
+
+                <!-- Active Loans -->
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between space-y-0 pb-2">
+                        <p class="text-sm font-medium text-gray-500">Active Loans</p>
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                </path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="activeLoans" class="text-2xl font-bold">0</div>
+                    <p class="text-xs text-gray-500 mt-1">Current active loans</p>
+                </div>
+            </div>
+
+            <!-- ── Chart Row ── -->
+            <div class="grid gap-4 md:grid-cols-2">
+                <!-- Tea Collected Chart -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Tea Collected — Last 6 Months</h3>
+                        <span class="text-xs text-gray-400 font-medium">kg</span>
+                    </div>
+                    <canvas id="teaChart" height="160"></canvas>
+                </div>
+                <!-- Income vs Expenses Chart -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Income vs Expenses — Last 6 Months</h3>
+                        <span id="chartCurrency" class="text-xs text-gray-400 font-medium">USD</span>
+                    </div>
+                    <canvas id="financeChart" height="160"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <div class="md:col-span-4 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-lg font-semibold mb-4">Recent Tea Entries</h3>
+                    <div id="recentTeaEntries" class="space-y-4">
+                        <p class="text-sm text-gray-500">Loading...</p>
+                    </div>
+                </div>
+                <div class="md:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-lg font-semibold mb-4">Recent Transactions</h3>
+                    <div id="recentTransactions" class="space-y-4">
+                        <p class="text-sm text-gray-500">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/layout.js"></script>
+    <script src="js/back-button.js"></script>
+    <script>
+        let lastStatsJson = '';
+        let lastActivityJson = '';
+        let teaChartInstance = null;
+        let financeChartInstance = null;
+
+        // ── Build last-6-months label array ──────────────────────────────────
+        function getLast6MonthLabels() {
+            const labels = [];
+            const keys = [];
+            const now = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+                labels.push(label);
+                keys.push(key);
+            }
+            return { labels, keys };
+        }
+
+        // ── Aggregate data by month ────────────────────────────────────────
+        function aggregateByMonth(entries, keys, getValue) {
+            const map = {};
+            keys.forEach(k => map[k] = 0);
+            entries.forEach(e => {
+                const key = (e.date || '').slice(0, 7);
+                if (key in map) map[key] += getValue(e);
+            });
+            return keys.map(k => map[k]);
+        }
+
+        // ── Render / update charts ─────────────────────────────────────────
+        async function renderCharts() {
+            // Wait until Chart.js is loaded (CDN may take a moment)
+            if (typeof Chart === 'undefined') {
+                setTimeout(renderCharts, 300);
+                return;
+            }
+
+            const isDark = localStorage.getItem('theme') === 'dark';
+            const gridColor  = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)';
+            const tickColor  = isDark ? '#94a3b8' : '#6b7280';
+            const tooltipBg  = isDark ? '#1e293b' : '#fff';
+            const tooltipFg  = isDark ? '#f1f5f9' : '#111827';
+            const primary    = document.documentElement.style.getPropertyValue('--primary-color') || '#16a34a';
+
+            const { labels, keys } = getLast6MonthLabels();
+
+            let teaEntries = [], finEntries = [];
+            try {
+                [teaEntries, finEntries] = await Promise.all([
+                    API.get('/tea-entries/'),
+                    API.get('/finances/')
+                ]);
+            } catch (e) { console.error('Chart data fetch failed', e); return; }
+
+            // ── Tea chart ─────────────────────────────────────────────────
+            const teaData = aggregateByMonth(teaEntries, keys, e => e.kilograms || 0);
+
+            const teaCtx = document.getElementById('teaChart').getContext('2d');
+            if (teaChartInstance) teaChartInstance.destroy();
+            teaChartInstance = new Chart(teaCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'kg Collected',
+                        data: teaData,
+                        backgroundColor: `${primary}cc`,
+                        borderColor: primary,
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: tooltipBg,
+                            titleColor: tooltipFg,
+                            bodyColor: tooltipFg,
+                            borderColor: gridColor,
+                            borderWidth: 1,
+                            callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(1)} kg` }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor }, beginAtZero: true }
+                    }
+                }
+            });
+
+            // ── Finance chart ──────────────────────────────────────────────
+            const incomeData  = aggregateByMonth(finEntries, keys, e => e.amount > 0 ? e.amount : 0);
+            const expenseData = aggregateByMonth(finEntries, keys, e => e.amount < 0 ? Math.abs(e.amount) : 0);
+
+            document.getElementById('chartCurrency').textContent =
+                (window.appSettings && window.appSettings.currency) || 'USD';
+
+            const finCtx = document.getElementById('financeChart').getContext('2d');
+            if (financeChartInstance) financeChartInstance.destroy();
+            financeChartInstance = new Chart(finCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: incomeData,
+                            backgroundColor: 'rgba(22,163,74,0.75)',
+                            borderColor: '#16a34a',
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                        },
+                        {
+                            label: 'Expenses',
+                            data: expenseData,
+                            backgroundColor: 'rgba(220,38,38,0.65)',
+                            borderColor: '#dc2626',
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { color: tickColor, font: { size: 12 }, boxWidth: 12, padding: 12 }
+                        },
+                        tooltip: {
+                            backgroundColor: tooltipBg,
+                            titleColor: tooltipFg,
+                            bodyColor: tooltipFg,
+                            borderColor: gridColor,
+                            borderWidth: 1,
+                            callbacks: {
+                                label: ctx => {
+                                    const currency = (window.appSettings && window.appSettings.currency) || 'USD';
+                                    return ` ${new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(ctx.parsed.y)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        async function loadDashboard() {
+            try {
+                const stats = await API.get('/dashboard/stats');
+                const statsJson = JSON.stringify(stats);
+                if (statsJson !== lastStatsJson) {
+                    lastStatsJson = statsJson;
+                    document.getElementById('totalTea').textContent = `${stats.total_tea.toFixed(1)} kg`;
+                    document.getElementById('totalTeaSub').textContent = `Last month: ${stats.last_month.tea_last_month.toFixed(1)} kg`;
+
+                    document.getElementById('totalExpenses').textContent = formatCurrency(stats.total_expenses);
+                    document.getElementById('totalExpensesSub').textContent = `Last month: ${formatCurrency(stats.last_month.expenses_last_month)}`;
+
+                    document.getElementById('netProfit').textContent = formatCurrency(stats.net_profit);
+                    document.getElementById('netProfitSub').textContent = `Last month: ${formatCurrency(stats.last_month.profit_last_month)}`;
+
+                    const profitIcon = document.getElementById('profitIcon');
+                    if (stats.net_profit >= 0) {
+                        document.getElementById('netProfit').className = 'text-2xl font-bold text-green-600';
+                        profitIcon.className = 'w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center';
+                        profitIcon.innerHTML = `<svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>`;
+                    } else {
+                        document.getElementById('netProfit').className = 'text-2xl font-bold text-red-600';
+                        profitIcon.className = 'w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center';
+                        profitIcon.innerHTML = `<svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>`;
+                    }
+
+                    document.getElementById('activeLoans').textContent = stats.active_loans;
+                }
+
+                // Load recent activity
+                const activity = await API.get('/dashboard/recent-activity');
+                const activityJson = JSON.stringify(activity);
+                if (activityJson !== lastActivityJson) {
+                    lastActivityJson = activityJson;
+                    
+                    const teaContainer = document.getElementById('recentTeaEntries');
+                    if (!activity.tea_entries || activity.tea_entries.length === 0) {
+                        teaContainer.innerHTML = '<p class="text-sm text-gray-500">No recent entries.</p>';
+                    } else {
+                        teaContainer.innerHTML = activity.tea_entries.map(entry => `
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">${entry.kilograms} kg collected</p>
+                                        <p class="text-xs text-gray-500">${entry.date}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+
+                    const transContainer = document.getElementById('recentTransactions');
+                    if (!activity.transactions || activity.transactions.length === 0) {
+                        transContainer.innerHTML = '<p class="text-sm text-gray-500">No recent transactions.</p>';
+                    } else {
+                        transContainer.innerHTML = activity.transactions.map(t => `
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">${t.description}</p>
+                                    <p class="text-xs text-gray-500">${t.date}</p>
+                                </div>
+                                <div class="text-sm font-bold ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                    ${t.amount >= 0 ? '+' : ''}${formatCurrency(t.amount)}
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // Wait for layout + session initialization to complete
+        window.addEventListener('settingsLoaded', () => {
+            loadDashboard();
+            renderCharts();
+            setInterval(loadDashboard, 3000);
+        }, { once: true });
+    </script>
+
+</body>
+</html>

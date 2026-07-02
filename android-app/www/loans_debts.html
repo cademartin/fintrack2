@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tea Tracker — Loans &amp; Debts</title>
+    <meta name="description" content="Track loans you have given and debts you owe.">
+
+    <!-- Capacitor Bridge (injected at build time) -->
+    <script src="capacitor.js"></script>
+
+    <!-- Tailwind CSS: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/tailwind.js';
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Outfit Font: Local-First -->
+    <style>
+        @font-face { font-family: 'Outfit'; font-weight: 300; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-300.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 400; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-400.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 600; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-600.woff2') format('woff2'); }
+        @font-face { font-family: 'Outfit'; font-weight: 800; font-style: normal; font-display: swap; src: url('assets/fonts/outfit-800.woff2') format('woff2'); }
+        body {
+            font-family: 'Outfit', sans-serif;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .status-badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; text-transform: capitalize; }
+        .status-active   { background: #dcfce7; color: #15803d; }
+        .status-pending  { background: #fef9c3; color: #a16207; }
+        .status-paid     { background: #f1f5f9; color: #64748b; }
+    </style>
+
+    <!-- Lucide Icons: Local-First -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'assets/js/lucide.js';
+            s.onload = function () { if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); };
+            document.head.appendChild(s);
+        })();
+    </script>
+
+    <!-- Offline JS Engine & API -->
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+
+    <div id="layout-wrapper">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-3xl font-bold tracking-tight">Loans &amp; Debts</h2>
+                <div class="flex items-center space-x-3">
+                    <!-- Filter by status -->
+                    <select id="statusFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                    </select>
+                    <div class="space-x-2">
+                        <button onclick="openModal('loan')"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            Add Loan
+                        </button>
+                        <button onclick="openModal('debt')"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            Add Debt
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                <!-- Debts Section (I Owe) -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-semibold text-gray-700">Money I Owe (Debts)<span id="debtsTotal" class="text-red-600 font-bold ml-2"></span></h3>
+                    <div id="debtsList" class="space-y-3">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 min-h-[200px] flex items-center justify-center">
+                            <p class="text-gray-500">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loans Section (Owed to Me) -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-semibold text-gray-700">Money Owed to Me (Loans)<span id="loansTotal" class="text-blue-600 font-bold ml-2"></span></h3>
+                    <div id="loansList" class="space-y-3">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 min-h-[200px] flex items-center justify-center">
+                            <p class="text-gray-500">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Modal -->
+    <div id="itemModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 id="modalTitle" class="text-lg leading-6 font-medium text-gray-900">Add Item</h3>
+                <div class="mt-2 px-7 py-3">
+                    <input type="text" id="ld-name" placeholder="Name (Person/Entity)"
+                        class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <input type="number" id="ld-amount" placeholder="Amount"
+                        class="mb-3 px-3 py-2 border rounded w-full" step="0.01" required>
+                    <input type="date" id="ld-dueDate" class="mb-3 px-3 py-2 border rounded w-full" required>
+                    <input type="text" id="ld-description" placeholder="Description"
+                        class="mb-3 px-3 py-2 border rounded w-full">
+                    <input type="hidden" id="ld-type">
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="saveItemBtn"
+                        class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                        Save
+                    </button>
+                    <button id="cancelItemBtn"
+                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/layout.js"></script>
+    <script src="js/back-button.js"></script>
+    <script>
+        let allItems = [];
+
+        // ── Confirm-before-close ──────────────────────────────────────────────
+        function hasModalInputValues() {
+            const inputs = document.querySelectorAll('#itemModal input:not([type=hidden])');
+            return [...inputs].some(el => el.value.trim() !== '');
+        }
+
+        // Close modal
+        function closeItemModal() {
+            if (hasModalInputValues()) {
+                if (!confirm('You have unsaved data. Close anyway?')) return;
+            }
+            document.getElementById('itemModal').classList.add('hidden');
+        }
+
+        document.getElementById('cancelItemBtn').addEventListener('click', closeItemModal);
+        document.getElementById('itemModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('itemModal')) closeItemModal();
+        });
+
+        // ── Open modal ────────────────────────────────────────────────────────
+        function openModal(type) {
+            document.getElementById('ld-type').value = type;
+            document.getElementById('modalTitle').textContent =
+                type === 'loan' ? 'Add Loan (Given)' : 'Add Debt (Owed)';
+            document.getElementById('modalTitle').className =
+                `text-lg leading-6 font-medium ${type === 'loan' ? 'text-blue-900' : 'text-red-900'}`;
+            const saveBtn = document.getElementById('saveItemBtn');
+            saveBtn.className = `px-4 py-2 ${type === 'loan'
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-red-600 hover:bg-red-700'
+            } text-white text-base font-medium rounded-md w-full shadow-sm focus:outline-none`;
+            document.getElementById('ld-dueDate').valueAsDate = new Date();
+            document.getElementById('itemModal').classList.remove('hidden');
+        }
+        window.openModal = openModal;
+
+        // ── Status filter ─────────────────────────────────────────────────────
+        document.getElementById('statusFilter').addEventListener('change', () => renderItems(allItems));
+
+        // ── Load & render ─────────────────────────────────────────────────────
+        async function loadItems() {
+            try {
+                allItems = await API.get('/loans-debts/');
+                renderItems(allItems);
+            } catch (error) {
+                console.error('Error loading items:', error);
+            }
+        }
+
+        function renderItems(items) {
+            const filterStatus = document.getElementById('statusFilter').value;
+
+            const debtsList = document.getElementById('debtsList');
+            const loansList = document.getElementById('loansList');
+            debtsList.innerHTML = '';
+            loansList.innerHTML = '';
+
+            const allDebts = items.filter(i => i.type === 'debt');
+            const allLoans = items.filter(i => i.type === 'loan');
+
+            const filteredDebts = filterStatus === 'all' ? allDebts : allDebts.filter(i => (i.status || 'active').toLowerCase() === filterStatus);
+            const filteredLoans = filterStatus === 'all' ? allLoans : allLoans.filter(i => (i.status || 'active').toLowerCase() === filterStatus);
+
+            // Totals always show active+pending amounts only
+            const activeDebts = allDebts.filter(i => ['active','pending'].includes((i.status||'').toLowerCase()));
+            const activeLoans = allLoans.filter(i => ['active','pending'].includes((i.status||'').toLowerCase()));
+            document.getElementById('debtsTotal').textContent = `: ${formatCurrency(activeDebts.reduce((s,i)=>s+i.amount,0))}`;
+            document.getElementById('loansTotal').textContent = `: ${formatCurrency(activeLoans.reduce((s,i)=>s+i.amount,0))}`;
+
+            if (filteredDebts.length === 0) {
+                debtsList.innerHTML = `<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex justify-center">
+                    <p class="text-gray-500">No debts${filterStatus !== 'all' ? ` with status "${filterStatus}"` : ''}.</p></div>`;
+            } else {
+                filteredDebts.forEach(item => debtsList.appendChild(createItemCard(item)));
+            }
+
+            if (filteredLoans.length === 0) {
+                loansList.innerHTML = `<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex justify-center">
+                    <p class="text-gray-500">No loans${filterStatus !== 'all' ? ` with status "${filterStatus}"` : ''}.</p></div>`;
+            } else {
+                filteredLoans.forEach(item => loansList.appendChild(createItemCard(item)));
+            }
+        }
+
+        function createItemCard(item) {
+            const div = document.createElement('div');
+            const isPaid = (item.status || '').toLowerCase() === 'paid';
+            div.className = `bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex justify-between items-center ${isPaid ? 'opacity-60' : ''}`;
+            const amountColor = isPaid ? '#94a3b8' : (item.type === 'loan' ? '#2563eb' : '#dc2626');
+            const statusClass = isPaid ? 'status-paid' : (item.status === 'active' ? 'status-active' : 'status-pending');
+
+            div.innerHTML = `
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 class="font-bold text-gray-900">${item.name}</h4>
+                        <span class="status-badge ${statusClass}">${item.status || 'active'}</span>
+                    </div>
+                    <p class="text-sm text-gray-500">Due: ${item.dueDate}</p>
+                    <p class="text-xs text-gray-400">${item.description || ''}</p>
+                </div>
+                <div class="text-right space-y-2">
+                    <p class="text-lg font-bold" style="color:${amountColor}">${formatCurrency(item.amount)}</p>
+                    ${!isPaid ? `<button onclick="markAsPaid('${item.id}')"
+                        class="block text-xs text-green-600 hover:text-green-800 font-semibold border border-green-200 rounded px-2 py-0.5 w-full">
+                        ✓ Mark Paid
+                    </button>` : ''}
+                    <button onclick="deleteItem('${item.id}')"
+                        class="block text-xs text-red-500 hover:text-red-700 mt-1">Delete</button>
+                </div>
+            `;
+            return div;
+        }
+
+        // ── Mark as Paid ──────────────────────────────────────────────────────
+        async function markAsPaid(id) {
+            const item = allItems.find(i => i.id === id);
+            if (!item) return;
+            if (!confirm(`Mark "${item.name}" as paid? The record will be kept for history.`)) return;
+            try {
+                await API.put(`/loans-debts/${id}`, { ...item, status: 'paid' });
+                loadItems();
+            } catch (error) {
+                alert('Failed to update status');
+                console.error(error);
+            }
+        }
+        window.markAsPaid = markAsPaid;
+
+        async function deleteItem(id) {
+            if (!confirm('Mark this item as cleared/deleted?')) return;
+            try {
+                await API.delete(`/loans-debts/${id}`);
+                loadItems();
+            } catch (error) {
+                alert('Failed to delete item');
+            }
+        }
+        window.deleteItem = deleteItem;
+
+        // ── Save new item ─────────────────────────────────────────────────────
+        document.getElementById('saveItemBtn').addEventListener('click', async () => {
+            const data = {
+                name: document.getElementById('ld-name').value,
+                amount: parseFloat(document.getElementById('ld-amount').value),
+                dueDate: document.getElementById('ld-dueDate').value,
+                description: document.getElementById('ld-description').value,
+                type: document.getElementById('ld-type').value,
+                status: 'pending'
+            };
+
+            try {
+                await API.post('/loans-debts/', data);
+                document.getElementById('itemModal').classList.add('hidden');
+                loadItems();
+                document.getElementById('ld-name').value = '';
+                document.getElementById('ld-amount').value = '';
+                document.getElementById('ld-description').value = '';
+            } catch (error) {
+                alert('Failed to create item');
+                console.error(error);
+            }
+        });
+
+        window.addEventListener('settingsLoaded', loadItems, { once: true });
+    </script>
+
+</body>
+</html>
