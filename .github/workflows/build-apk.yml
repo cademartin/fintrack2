@@ -1,0 +1,81 @@
+name: Build Tea Tracker Android APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager --licenses 2>/dev/null || true
+
+      - name: Install Wrapper Dependencies
+        working-directory: android-app
+        run: npm install
+
+      - name: Add Android Platform Wrapper
+        working-directory: android-app
+        run: npx cap add android
+
+      - name: Configure Native Permissions
+        run: |
+          python3 -c "
+          path = 'android-app/android/app/src/main/AndroidManifest.xml'
+          with open(path, 'r') as f: content = f.read()
+          permissions = '''
+              <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\" />
+              <uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" />
+              <uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" />
+          '''
+          if '<uses-permission' in content:
+              parts = content.split('<uses-permission', 1)
+              new_content = parts[0] + permissions.strip() + '\n    <uses-permission' + parts[1]
+          else:
+              parts = content.split('<application', 1)
+              new_content = parts[0] + permissions + '    <application' + parts[1]
+          with open(path, 'w') as f: f.write(new_content)
+          print('Successfully injected custom permissions.')
+          "
+
+      - name: Sync Web Assets to Android project
+        working-directory: android-app
+        run: npx cap sync android
+
+      - name: Make Gradle Executable
+        run: chmod +x android-app/android/gradlew
+
+      - name: Build Debug APK via Gradle
+        working-directory: android-app/android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeaTracker-debug-apk
+          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
